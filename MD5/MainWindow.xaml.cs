@@ -64,10 +64,6 @@ namespace MD5
 
         private void checker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            // Test case:
-            // File: Devil May Cry (Europe) (En,Fr,De,Es,It).7z
-            // Hash: 5a52747ef4e4b87a0b6bddf93ac804f3
-
             Title = "Compute MD5";
             BtnOpen.IsEnabled = true;
             BtnPaste.IsEnabled = true;
