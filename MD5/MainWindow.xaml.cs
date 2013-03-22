@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using Microsoft.Win32;
 using System.Security.Cryptography;
 using System.IO;
@@ -48,13 +50,14 @@ namespace MD5
             }
             Title = "Calculating (0%)";
 
+            StbChecksum.Content = new ProgressBar();
             // Thread for calculating file checksum in the background:
             var checker = new BackgroundWorker();
             checker.DoWork += checker_DoWork;
             checker.ProgressChanged += checker_ProgressChanged;
             checker.RunWorkerCompleted += checker_RunWorkerCompleted;
             checker.WorkerReportsProgress = true;
-            
+
             checker.RunWorkerAsync();
 
             BtnOpen.IsEnabled = false;
@@ -68,29 +71,34 @@ namespace MD5
             BtnOpen.IsEnabled = true;
             BtnPaste.IsEnabled = true;
             BtnCalculate.IsEnabled = true;
-
-            var output = "Hash for " + filePath + ": \n" + checksum + "\n\n";
-            if (!String.IsNullOrWhiteSpace(TxtHash.Text))
+            ((ProgressBar) StbChecksum.Content).Width = String.IsNullOrWhiteSpace(TxtHash.Text) ? 200 : 330;
+            if (!Regex.IsMatch(TxtHash.Text, Hashvalidator) && (!String.IsNullOrWhiteSpace(TxtHash.Text)))
             {
-                if (Regex.IsMatch(TxtHash.Text, Hashvalidator))
-                {
-                    if (TxtHash.Text == checksum)
-                        output += "The hash " + TxtHash.Text +
-                                  " is the same as " + checksum + "it appears to be a valid file";
-
-                    else output += "No Match! " + TxtPath.Text + " is not the same";
-                }
-                else
-                {
-                    output += "Invalid format: Could not compare hash code to file.";
-                }
+                TbkStatus.Text = "ERROR";
+                TbkStatus.ToolTip = "The checksum provided is an invalid format";
             }
-            MessageBox.Show(output, "Calculation complete!");
+            else if (Regex.IsMatch(TxtHash.Text, Hashvalidator))
+            {
+                TbkStatus.Text = TxtHash.Text == checksum ? "MATCH" : "NOT A MATCH";
+            }
+            else TbkStatus.Text = String.Empty;
+
+            var ntbk = new TextBlock
+                {
+                    Name = "TbkChecksum",
+                    FontWeight = FontWeights.DemiBold,
+                    Text = checksum,
+                    ToolTip = "Click to copy checksum to clipboard",
+                    HorizontalAlignment = HorizontalAlignment.Right
+                };
+
+            ntbk.MouseLeftButtonUp += TbkChecksum_OnMouseLeftButtonUp;
+            StbChecksum.Content = ntbk;
         }
 
         void checker_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
-            PrgProgress.Value = e.ProgressPercentage;
+            ((ProgressBar)StbChecksum.Content).Value = e.ProgressPercentage;
             Title = "Calculating (" + e.ProgressPercentage + "%)";
         }
 
@@ -137,9 +145,9 @@ namespace MD5
                     } while (bytesRead != 0);
                     checksum = FormatHash(hashAlgorithm.Hash);
                 }
-                
+
             }
-            
+
         }
 
         private void BtnPaste_OnClick(object sender, RoutedEventArgs e)
@@ -157,6 +165,11 @@ namespace MD5
                 output.Append(b.ToString("x2"));
             }
             return output.ToString().ToUpper();
+        }
+
+        private static void TbkChecksum_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            Clipboard.SetText(((TextBlock)sender).Text);
         }
     }
 }
